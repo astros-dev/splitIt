@@ -13,6 +13,8 @@ interface ExpenseContextType {
   expenses: Expense[];
   parties: string[];
   addExpense: (expense: Expense) => void;
+  editExpense: (id: string, updatedExpense: Expense) => void;
+  removeExpense: (id: string) => void;
   addParty: (name: string) => void;
   removeParty: (name: string) => void;
   calculateSettlements: () => { from: string; to: string; amount: number; }[];
@@ -26,6 +28,39 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
 
   const addExpense = (expense: Expense) => {
     setExpenses([...expenses, expense]);
+  };
+
+  const editExpense = (id: string, updatedExpense: Expense) => {
+    setExpenses(expenses.map(expense => 
+      expense.id === id ? updatedExpense : expense
+    ));
+  };
+
+  const removeExpense = (id: string) => {
+    try {
+      console.log('removeExpense called with id:', id);
+      console.log('Current expenses length:', expenses.length);
+      console.log('Current expenses:', JSON.stringify(expenses, null, 2));
+      
+      const expenseToRemove = expenses.find(e => e.id === id);
+      console.log('Found expense to remove:', expenseToRemove);
+      
+      const updatedExpenses = expenses.filter(expense => {
+        const keep = expense.id !== id;
+        console.log(`Checking expense ${expense.id}: keep=${keep}`);
+        return keep;
+      });
+      
+      console.log('Updated expenses length:', updatedExpenses.length);
+      console.log('Updated expenses:', JSON.stringify(updatedExpenses, null, 2));
+      
+      setExpenses(prevExpenses => {
+        console.log('Setting expenses from:', prevExpenses.length, 'to:', updatedExpenses.length);
+        return [...updatedExpenses];
+      });
+    } catch (error) {
+      console.error('Error in removeExpense:', error);
+    }
   };
 
   const addParty = (name: string) => {
@@ -103,7 +138,9 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     <ExpenseContext.Provider value={{ 
       expenses, 
       parties, 
-      addExpense, 
+      addExpense,
+      editExpense,
+      removeExpense, 
       addParty, 
       removeParty, 
       calculateSettlements 
@@ -136,6 +173,13 @@ export default function RootLayout() {
           name="add-expense"
           options={{
             title: 'Add Expense',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="edit-expense"
+          options={{
+            title: 'Edit Expense',
             presentation: 'modal',
           }}
         />

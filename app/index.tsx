@@ -1,9 +1,48 @@
-import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
-import { Link } from 'expo-router';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react-native';
+import { Link, router } from 'expo-router';
 import { useExpenses } from './_layout';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function Home() {
-  const { expenses, parties } = useExpenses();
+  const { expenses, parties, removeExpense } = useExpenses();
+
+  const handleExpensePress = (id: string) => {
+    router.push(`/edit-expense?id=${id}`);
+  };
+
+  const handleDelete = (id: string) => {
+    console.log('Delete button clicked for id:', id);
+    try {
+      Alert.alert(
+        'Delete Expense',
+        'Are you sure you want to delete this expense?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => {
+              console.log('Delete cancelled');
+            }
+          },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => {
+              try {
+                console.log('Delete confirmed for id:', id);
+                removeExpense(id);
+              } catch (error) {
+                console.error('Error in delete handler:', error);
+              }
+            }
+          }
+        ],
+        { cancelable: true }
+      );
+    } catch (error) {
+      console.error('Error showing alert:', error);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -29,13 +68,27 @@ export default function Home() {
               data={expenses}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
-                <View style={styles.expenseCard}>
-                  <Text style={styles.expenseDescription}>{item.description}</Text>
-                  <Text style={styles.expenseAmount}>${item.amount.toFixed(2)}</Text>
-                  <Text style={styles.expensePaidBy}>Paid by: {item.paidBy}</Text>
-                  <Text style={styles.expenseSharedBy}>
-                    Shared by: {item.sharedBy.join(', ')}
-                  </Text>
+                <View style={styles.expenseCardContainer}>
+                  <TouchableOpacity 
+                    style={styles.expenseCard}
+                    onPress={() => handleExpensePress(item.id)}
+                  >
+                    <Text style={styles.expenseDescription}>{item.description}</Text>
+                    <Text style={styles.expenseAmount}>${item.amount.toFixed(2)}</Text>
+                    <Text style={styles.expensePaidBy}>Paid by: {item.paidBy}</Text>
+                    <Text style={styles.expenseSharedBy}>
+                      Shared by: {item.sharedBy.join(', ')}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => {
+                      console.log('Direct delete attempt for id:', item.id);
+                      removeExpense(item.id);
+                    }}
+                  >
+                    <MaterialIcons name="delete" size={24} color="#f44336" />
+                  </TouchableOpacity>
                 </View>
               )}
             />
@@ -90,11 +143,16 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 20,
   },
+  expenseCardContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   expenseCard: {
+    flex: 1,
     backgroundColor: 'white',
     padding: 15,
     borderRadius: 10,
-    marginBottom: 10,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -153,5 +211,9 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: '500',
+  },
+  deleteButton: {
+    padding: 10,
+    marginLeft: 10,
   },
 });
