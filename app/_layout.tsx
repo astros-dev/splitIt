@@ -1,22 +1,16 @@
 import { Stack } from 'expo-router';
-import { createContext, useContext, useState } from 'react';
-
-interface Expense {
-  id: string;
-  description: string;
-  amount: number;
-  paidBy: string;
-  sharedBy: string[];
-}
+import { createContext, useContext, useState, useEffect } from 'react';
+import { Expense } from './types';
+import * as db from './services/database';
 
 interface ExpenseContextType {
   expenses: Expense[];
   parties: string[];
-  addExpense: (expense: Expense) => void;
-  editExpense: (id: string, updatedExpense: Expense) => void;
-  removeExpense: (id: string) => void;
-  addParty: (name: string) => void;
-  removeParty: (name: string) => void;
+  addExpense: (expense: Expense) => Promise<void>;
+  editExpense: (id: string, updatedExpense: Expense) => Promise<void>;
+  removeExpense: (id: string) => Promise<void>;
+  addParty: (name: string) => Promise<void>;
+  removeParty: (name: string) => Promise<void>;
   calculateSettlements: () => { from: string; to: string; amount: number; }[];
 }
 
@@ -26,51 +20,72 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [parties, setParties] = useState<string[]>([]);
 
-  const addExpense = (expense: Expense) => {
-    setExpenses([...expenses, expense]);
-  };
+  // Initialize database and load data
+  useEffect(() => {
+    const initializeData = async () => {
+      try {
+        await db.initDatabase();
+        const loadedParties = await db.getParties();
+        const loadedExpenses = await db.getExpenses();
+        setParties(loadedParties);
+        setExpenses(loadedExpenses);
+      } catch (error) {
+        console.error('Error initializing data:', error);
+      }
+    };
+    initializeData();
+  }, []);
 
-  const editExpense = (id: string, updatedExpense: Expense) => {
-    setExpenses(expenses.map(expense => 
-      expense.id === id ? updatedExpense : expense
-    ));
-  };
-
-  const removeExpense = (id: string) => {
+  const addExpense = async (expense: Expense) => {
     try {
-      console.log('removeExpense called with id:', id);
-      console.log('Current expenses length:', expenses.length);
-      console.log('Current expenses:', JSON.stringify(expenses, null, 2));
-      
-      const expenseToRemove = expenses.find(e => e.id === id);
-      console.log('Found expense to remove:', expenseToRemove);
-      
-      const updatedExpenses = expenses.filter(expense => {
-        const keep = expense.id !== id;
-        console.log(`Checking expense ${expense.id}: keep=${keep}`);
-        return keep;
-      });
-      
-      console.log('Updated expenses length:', updatedExpenses.length);
-      console.log('Updated expenses:', JSON.stringify(updatedExpenses, null, 2));
-      
-      setExpenses(prevExpenses => {
-        console.log('Setting expenses from:', prevExpenses.length, 'to:', updatedExpenses.length);
-        return [...updatedExpenses];
-      });
+      await db.addExpense(expense);
+      setExpenses(await db.getExpenses());
     } catch (error) {
-      console.error('Error in removeExpense:', error);
+      console.error('Error adding expense:', error);
+      throw error;
     }
   };
 
-  const addParty = (name: string) => {
-    if (!parties.includes(name)) {
-      setParties([...parties, name]);
+  const editExpense = async (id: string, updatedExpense: Expense) => {
+    try {
+      await db.editExpense(id, updatedExpense);
+      setExpenses(await db.getExpenses());
+    } catch (error) {
+      console.error('Error editing expense:', error);
+      throw error;
     }
   };
 
-  const removeParty = (name: string) => {
-    setParties(parties.filter(p => p !== name));
+  const removeExpense = async (id: string) => {
+    try {
+      await db.removeExpense(id);
+      setExpenses(await db.getExpenses());
+    } catch (error) {
+      console.error('Error removing expense:', error);
+      throw error;
+    }
+  };
+
+  const addParty = async (name: string) => {
+    try {
+      if (!parties.includes(name)) {
+        await db.addParty(name);
+        setParties(await db.getParties());
+      }
+    } catch (error) {
+      console.error('Error adding party:', error);
+      throw error;
+    }
+  };
+
+  const removeParty = async (name: string) => {
+    try {
+      await db.removeParty(name);
+      setParties(await db.getParties());
+    } catch (error) {
+      console.error('Error removing party:', error);
+      throw error;
+    }
   };
 
   const calculateSettlements = () => {
@@ -130,7 +145,7 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
         people.splice(people.indexOf(to), 1);
       }
     }
-
+    
     return settlements;
   };
 

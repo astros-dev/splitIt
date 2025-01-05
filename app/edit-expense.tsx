@@ -96,6 +96,13 @@ export default function EditExpense() {
         </View>
 
         <Text style={styles.label}>Shared By</Text>
+        <TouchableOpacity 
+          onPress={() => setSelectedParties(selectedParties.length === parties.length ? [] : [...parties])}
+        >
+          <Text style={styles.selectAllText}>
+            {selectedParties.length === parties.length ? 'Deselect All' : 'Select All'}
+          </Text>
+        </TouchableOpacity>
         <View style={styles.partyList}>
           {parties.map(party => (
             <TouchableOpacity
@@ -204,5 +211,11 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: '500',
+  },
+  selectAllText: {
+    color: '#2196F3',
+    fontSize: 14,
+    marginBottom: 10,
+    textDecorationLine: 'underline',
   },
 }); 
